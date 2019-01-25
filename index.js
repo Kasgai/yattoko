@@ -88,15 +88,15 @@ function setup(){
 		}
 		
 	}
-	conditionBg = loadImage("asset/orangeRect.png");
-	entryPointBg = loadImage("asset/purpleRect.png");
-	blueCircle = loadImage("asset/blueCircle.png");
-	conditionIcon = loadImage("asset/smallRect.png");
-	blueCircleIcon = loadImage("asset/smallCircle.png");
-	trashIcon = loadImage("asset/trash.png");
-	trashOpenIcon = loadImage("asset/trashOpen.png");
+	conditionBg = loadImage("../asset/orangeRect.png");
+	entryPointBg = loadImage("../asset/purpleRect.png");
+	blueCircle = loadImage("../asset/blueCircle.png");
+	conditionIcon = loadImage("../asset/smallRect.png");
+	blueCircleIcon = loadImage("../asset/smallCircle.png");
+	trashIcon = loadImage("../asset/trash.png");
+	trashOpenIcon = loadImage("../asset/trashOpen.png");
 	assets = {"condition":conditionBg,"entryPoint":entryPointBg,"result":blueCircle,"conditionIcon":conditionIcon,"resultIcon":blueCircleIcon};
-	resultImages = [loadImage("asset/resultbg0.png"),loadImage("asset/resultbg1.png"),loadImage("asset/resultbg2.png"),loadImage("asset/resultbg3.png"),loadImage("asset/resultbg4.png"),loadImage("asset/resultbg5.png"),loadImage("asset/resultbg6.png"),loadImage("asset/resultbg7.png"),loadImage("asset/resultbg8.png"),loadImage("asset/resultbg9.png"),loadImage("asset/resultbg10.png")];
+	resultImages = [loadImage("../asset/resultbg0.png"),loadImage("../asset/resultbg1.png"),loadImage("../asset/resultbg2.png"),loadImage("../asset/resultbg3.png"),loadImage("../asset/resultbg4.png"),loadImage("../asset/resultbg5.png"),loadImage("../asset/resultbg6.png"),loadImage("../asset/resultbg7.png"),loadImage("../asset/resultbg8.png"),loadImage("../asset/resultbg9.png"),loadImage("../asset/resultbg10.png")];
 	trash.isOpen = false;
 	trash.open = {x:220,y:5,w:98,h:141};
 	trash.default = {x:220,y:5,w:88.5,h:117};
