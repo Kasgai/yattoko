@@ -151,7 +151,7 @@ function draw(){
 	data.forEach(function(obj){showObject(obj)});
 
 	textSize(50);
-	if (hantei)
+	if (hantei != null)
 	{
 		if(hantei)
 		{
