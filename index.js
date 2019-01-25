@@ -53,17 +53,55 @@ var trashIcon;
 var trashOpenIcon;
 var hantei = null;
 
-var input;
+var projectId;
+
+firebase.auth().onAuthStateChanged(function(user) {
+    if (user) {
+      // User is signed in.
+      var displayName = user.displayName;
+      var email = user.email;
+      var emailVerified = user.emailVerified;
+      var photoURL = user.photoURL;
+      var isAnonymous = user.isAnonymous;
+      var uid = user.uid;
+      var providerData = user.providerData;
+      // ...
+      
+    } else {
+      // User is signed out.
+      // ...
+      window.location.href = '../login.html';
+    }
+  });
+
+function getParam(name, url) {
+    if (!url) url = window.location.href;
+    name = name.replace(/[\[\]]/g, "\\$&");
+    var regex = new RegExp("[?&]" + name + "(=([^&#]*)|&|#|$)"),
+        results = regex.exec(url);
+    if (!results) return null;
+    if (!results[2]) return '';
+    return decodeURIComponent(results[2].replace(/\+/g, " "));
+}
 
 // init
 function setup(){
 
+	projectId = getParam("id");
+	if(!projectId || projectId == "")
+	{
+		//プロジェクトidが無い場合
+		return
+	}
+
+	firebase.database().ref("projects/"+projectId).once("value")
+        .then(function(snapshot) {
+		   console.log(JSON.parse(snapshot.child("code").val()));
+		   
+        });
+
 	createCanvas(document.documentElement.clientWidth, document.documentElement.clientHeight);
 	textAlign(CENTER, CENTER);
-
-	input = createInput();
-	input.position(document.documentElement.clientWidth - 200, 30);
-	  
 	  
 	let rowHeight = 30;
 	let rowSeparate = 5;
@@ -107,28 +145,26 @@ function setup(){
 function draw(){
 	clear();
 
-	fill(0);
-	textSize(18);
-	text("名前:",document.documentElement.clientWidth - 250,30)
-
 	drawTrash();
 	drawToolBox();
 	data = data.sort(compareTypes);
 	data.forEach(function(obj){showObject(obj)});
-	
-	if(hantei == true)
-	{
 
-		textSize(50);
-		fill(100,200,50);
-		text("正解", document.documentElement.clientWidth - 100, document.documentElement.clientHeight - 100);
-	}
-	else if(hantei == false)
+	textSize(50);
+	if (hantei)
 	{
-		fill(200,100,100);
-		textSize(50);
-		text("不正解", document.documentElement.clientWidth - 100, document.documentElement.clientHeight - 100);
+		if(hantei)
+		{
+			fill(100,200,50);
+			text("正解", document.documentElement.clientWidth - 100, document.documentElement.clientHeight - 100);
+		}
+		else
+		{
+			fill(200,100,100);
+			text("不正解", document.documentElement.clientWidth - 100, document.documentElement.clientHeight - 100);
+		}
 	}
+	
 }
 
 function drawTrash()
@@ -250,10 +286,12 @@ function showObject(obj)
 		}
 		
 		ellipse(obj.inputInterface.x + 18, obj.inputInterface.y + 18, obj.inputInterface.width, obj.inputInterface.height);
+
 		if(!obj.child && !obj.active)
 		{
 			obj.outputInterface = null;
 		}
+
 		if(obj.outputInterface)
 		{
 			ellipse(obj.outputInterface.x + 18, obj.outputInterface.y + 18, obj.outputInterface.width, obj.outputInterface.height);
@@ -264,8 +302,9 @@ function showObject(obj)
 		else if(obj.type == "no"){
 			stroke(200, 0, 0);
 		}
-			line(obj.inputInterface.x + 18, obj.inputInterface.y + 18, obj.outputInterface.x + 18, obj.outputInterface.y + 18);
-			noStroke();
+		line(obj.inputInterface.x + 18, obj.inputInterface.y + 18, obj.outputInterface.x + 18, obj.outputInterface.y + 18);
+		noStroke();
+		
 		}
 		
 	}
@@ -285,12 +324,6 @@ function tappedJudgeButton()
 	if(hantei == null)
 	{
 
-		if(!input || input.value() == null  || input.value() == "")
-		{
-			alert('名前を入力してください');
-			return
-		}
-
 		let outputData = $.extend([], data);
 		let entryPointData =  outputData.filter(e => e.type == "entryPoint")[0];
 
@@ -299,21 +332,17 @@ function tappedJudgeButton()
 		let resultIds = JSON.stringify(resultToolBox.map(function(e){return e.id}).sort());
 
 		hantei = (isAllCorrect(simpleStruct,[],[]) && isUsingAllBranch(simpleStruct) && usedResultIds == resultIds);
-
-		defaultDatabase.collection("yesnochart_answers").add({
-			name:input.value(),
+		firebase.database().ref("projects/"+projectId).update({
+			code:JSON.stringify(simpleStruct)
+		});
+		var yattokoDataRef = firebase.database().ref("projects/"+projectId+"/yattoko").push()
+		yattokoDataRef.set({
+			user:firebase.auth().currentUser.uid,
 			json:JSON.stringify(simpleStruct),
 			hantei:hantei
-		})
-		.then(function(docRef) {
-			console.log("Document written with ID: ", docRef.id);
-			document.getElementById("defaultCanvas0").toBlob(function(blob){
-				defaultStorage.ref().child("yesnochart/" + docRef.id + ".png").put(blob);
-			});
-			
-		})
-		.catch(function(error) {
-			console.error("Error adding document: ", error);
+		});
+		document.getElementById("defaultCanvas0").toBlob(function(blob){
+			firebase.storage().ref().child("yattoko/" + projectId + "/"+ yattokoDataRef.key + ".png").put(blob);
 		});
 
 	}

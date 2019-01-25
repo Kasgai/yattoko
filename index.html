@@ -6,26 +6,19 @@
 	<script   src="https://code.jquery.com/jquery-3.3.1.min.js"   integrity="sha256-FgpCb/KJQlLNfOu91ta32o/NMZxltwRo8QtmkMRdAu8="   crossorigin="anonymous"></script>
 	<script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/0.7.3/p5.js"></script>
 	<script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/0.7.3/addons/p5.dom.js"></script>
-	<script src="https://www.gstatic.com/firebasejs/5.5.2/firebase-app.js"></script>
-	<script src="https://www.gstatic.com/firebasejs/5.5.2/firebase-firestore.js"></script>
-	<script src="https://www.gstatic.com/firebasejs/5.5.2/firebase-storage.js"></script>
-<script>
-  // Initialize Firebase
-	// TODO: Replace with your project's customized code snippet
-  var config = {
-    apiKey: "AIzaSyDBVhW5qNNLaSEIJmvqhS6EwjipY9yO-n4",
-    authDomain: "blockman-robophone.firebaseapp.com",
-    databaseURL: "https://blockman-robophone.firebaseio.com",
-    projectId: "blockman-robophone",
-    storageBucket: "blockman-robophone.appspot.com",
-    messagingSenderId: "206297821652"
-  };
-	var defaultApp = firebase.initializeApp(config);
-	var defaultStorage = defaultApp.storage();
-	var defaultDatabase = defaultApp.firestore();
-	const settings = {/* your settings... */ timestampsInSnapshots: true};
-  defaultDatabase.settings(settings);
-</script>
+	<script src="https://www.gstatic.com/firebasejs/5.5.2/firebase.js"></script>
+	<script>
+		// Initialize Firebase
+		var config = {
+			apiKey: "AIzaSyDozEEmAxyqJU3avAdW_KBommb4HGR5nRk",
+			authDomain: "kasgai.firebaseapp.com",
+			databaseURL: "https://kasgai.firebaseio.com",
+			projectId: "kasgai",
+			storageBucket: "kasgai.appspot.com",
+			messagingSenderId: "143262592214"
+		};
+		firebase.initializeApp(config);
+	</script>
 	<script src="index.js" type="text/javascript"></script>
 </head>
 <body>
