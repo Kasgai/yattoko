@@ -1,17 +1,17 @@
 "use strict";
 
-let data = [
- {x:500, y: 50, w:277, h:63.5, active:false, type:"entryPoint",
- outputInterface:{x:122.5,y:24.5,width:36,height:21},title:"エントリポイント",
- titleAdjust:-15, replaceable: false, isEliminatable: false}
-];
+Array.prototype.last = function (){ return this[this.length -1];}
+
+let imageMgr = new ImageManager("../asset");
+
+let data = [];
 
 let template = {
  "condition":{w:277,h:81, active:false, type:"condition",
-  replaceable: false, isEliminatable: true,
+   isEliminatable: true,
   inputInterface:{x:122.5,y:-18,width:36,height:36},
   outputInterface:{yes:{x:58,y:63,width:36,height:3},no:{x:183,y:63,width:36,height:36}},titleAdjust:15},
- "result":{w:96,h:92.5, type:"result", active:false,  replaceable: false, isEliminatable: true,
+ "result":{w:96,h:92.5, type:"result", active:false,  isEliminatable: true,
   inputInterface:{x:30.5,y:-18,width:36,height:36},titleAdjust:15}
 };
 
@@ -41,30 +41,15 @@ let resultAndCondition = [
 	[true,false,false,false,false,false,false]//10台形
 ];
 
-var conditionIcon;
-var blueCircleIcon;
-var conditionBg;
-var entryPointBg;
-var blueCircle;
-let assets;
-var resultImages = [];
+
+
 var trash = {};
-var trashIcon;
-var trashOpenIcon;
 var hantei = null;
 
 var projectId;
 
 firebase.auth().onAuthStateChanged(function(user) {
     if (user) {
-      // User is signed in.
-      var displayName = user.displayName;
-      var email = user.email;
-      var emailVerified = user.emailVerified;
-      var photoURL = user.photoURL;
-      var isAnonymous = user.isAnonymous;
-      var uid = user.uid;
-      var providerData = user.providerData;
       // ...
       
     } else {
@@ -101,6 +86,9 @@ function setup(){
         });
 
 	createCanvas(document.documentElement.clientWidth, document.documentElement.clientHeight);
+	
+	data.push(new EntryPoint(500,50,imageMgr.getImageForName("purpleRect.png")));
+	
 	textAlign(CENTER, CENTER);
 	  
 	let rowHeight = 30;
@@ -126,15 +114,6 @@ function setup(){
 		}
 		
 	}
-	conditionBg = loadImage("../asset/orangeRect.png");
-	entryPointBg = loadImage("../asset/purpleRect.png");
-	blueCircle = loadImage("../asset/blueCircle.png");
-	conditionIcon = loadImage("../asset/smallRect.png");
-	blueCircleIcon = loadImage("../asset/smallCircle.png");
-	trashIcon = loadImage("../asset/trash.png");
-	trashOpenIcon = loadImage("../asset/trashOpen.png");
-	assets = {"condition":conditionBg,"entryPoint":entryPointBg,"result":blueCircle,"conditionIcon":conditionIcon,"resultIcon":blueCircleIcon};
-	resultImages = [loadImage("../asset/resultbg0.png"),loadImage("../asset/resultbg1.png"),loadImage("../asset/resultbg2.png"),loadImage("../asset/resultbg3.png"),loadImage("../asset/resultbg4.png"),loadImage("../asset/resultbg5.png"),loadImage("../asset/resultbg6.png"),loadImage("../asset/resultbg7.png"),loadImage("../asset/resultbg8.png"),loadImage("../asset/resultbg9.png"),loadImage("../asset/resultbg10.png")];
 	trash.isOpen = false;
 	trash.open = {x:220,y:5,w:98,h:141};
 	trash.default = {x:220,y:5,w:88.5,h:117};
@@ -147,8 +126,8 @@ function draw(){
 
 	drawTrash();
 	drawToolBox();
-	data = data.sort(compareTypes);
-	data.forEach(function(obj){showObject(obj)});
+	//data = data.sort(compareTypes);
+	data.forEach(function(obj){obj.show()});
 
 	textSize(50);
 	if (hantei != null)
@@ -171,10 +150,10 @@ function drawTrash()
 {
 	if(trash.isOpen)
 	{
-		image(trashOpenIcon,trash.open.x,trash.open.y,trash.open.w,trash.open.h);
+		image(imageMgr.getImageForName("trashOpen.png"),trash.open.x,trash.open.y,trash.open.w,trash.open.h);
 	}
 	else {
-		image(trashIcon,trash.default.x,trash.default.y,trash.default.w,trash.default.h);
+		image(imageMgr.getImageForName("trash.png"),trash.default.x,trash.default.y,trash.default.w,trash.default.h);
 	}
 }
 
@@ -226,7 +205,14 @@ function drawToolBox()
 		}
 		else {
 			pos = getRectCenter(30, obj.y, obj.w - 30, obj.h);
-			image(assets[obj.type + "Icon"],5, obj.y + 5,20,20);
+			if(obj.type =="condition")
+			{
+				image(imageMgr.getImageForName("smallRect.png"),5, obj.y + 5,20,20);
+			}
+			else {
+				image(imageMgr.getImageForName("smallCircle.png"),5, obj.y + 5,20,20);
+			}
+			
 		}
 		text(obj.title,pos.x,pos.y);
 		
@@ -268,11 +254,15 @@ function showObject(obj)
 
 	if(obj.type == "result")
 	{
-		image(resultImages[obj.id], obj.x, obj.y, obj.w,obj.h);
+		image(imageMgr.getResultImageForId(obj.id), obj.x, obj.y, obj.w,obj.h);
 	}
-	else if(assets[obj.type])
+	else if(obj.type == "condition")
 	{
-		image(assets[obj.type], obj.x, obj.y, obj.w,obj.h);
+		image(imageMgr.getImageForName("orangeRect.png"), obj.x, obj.y, obj.w,obj.h);
+	}
+	else if(obj.type == "entryPoint")
+	{
+		image(imageMgr.getImageForName("purpleRect.png"), obj.x, obj.y, obj.w,obj.h);
 	}
 
 	if(obj.type == "yes" || obj.type == "no")
@@ -471,63 +461,8 @@ function getSimpleStructData(obj)
 // when mouse is pressed
 function mousePressed(){
 
-	data.forEach(function(obj){
-		if(!obj.fixed)
-		{
-			if(obj.type=="yes" || obj.type == "no")
-			{
-				if(obj.outputInterface)
-				{
-					obj.active = checkTouch(obj.outputInterface.x,obj.outputInterface.y,obj.outputInterface.width,obj.outputInterface.height,mouseX,mouseY);
-				}
-				else {
-					obj.active = checkTouch(obj.inputInterface.x,obj.inputInterface.y,obj.inputInterface.width,obj.inputInterface.height,mouseX,mouseY);
-				}
-				if(obj.active)
-				{
-					console.log("active!!");
-				}
-				
-			}
-			else {
-				obj.active = checkTouch(obj.x,obj.y,obj.w,obj.h,mouseX,mouseY);
-			}
-			
-			if(obj.active)
-			{
-				data.filter(n =>n !== obj).forEach(function(n){n.active = false});
-			}
-
-			if(obj.type=="yes" || obj.type == "no")
-			{
-				if(obj.outputInterface)
-				{
-					obj.touchPosition = getTouchPosition(obj.outputInterface.x,obj.outputInterface.y,mouseX,mouseY);
-				}
-				else{
-					obj.touchPosition = getTouchPosition(obj.inputInterface.x,obj.inputInterface.y,mouseX,mouseY);
-				}
-				
-			}
-			else {
-				obj.touchPosition = getTouchPosition(obj.x,obj.y,mouseX,mouseY);
-			}
-			
-		}
-	});
-
-	data.forEach(function(obj){
-		if(!obj.fixed)
-		{	
-			if(obj.active && obj.parent && !(obj.type == "yes" || obj.type == "no" || obj.parent.type == "yes" || obj.parent.type == "no"))
-			{
-				obj.parent.child = null;
-				obj.parent = null;
-				console.log("released");
-			}
-			
-		}
-	});
+	data.forEach(obj=> obj.mousePressed(mouseX,mouseY));
+	
 
 	toolBoxButtons.forEach(function(obj){
 		if(checkTouch(obj.x,obj.y,obj.w,obj.h,mouseX,mouseY))
@@ -536,20 +471,22 @@ function mousePressed(){
 			{
 				tappedJudgeButton();
 			}
-			else {
-				let newElem;
-				newElem = jQuery.extend(true, {}, template[obj.type]);
-				newElem.title = obj.title;
-				newElem.id = obj.id;
-				newElem.x = mouseX - newElem.w / 2;
-				newElem.y = mouseY - newElem.h / 2;
-				newElem.touchPosition = {x:newElem.w/2,y:newElem.h/2};
-				newElem.active = true;
-				if(newElem.type == "condition")
-				{
-					makeConditionBranch(newElem);
-				}
-				data.push(newElem);
+			else if(obj.type == "condition"){
+				let newCondition = new Condition(mouseX - 40,mouseY - 40,imageMgr.getImageForName("orangeRect.png"),obj.title,obj.id);
+				newCondition.startDrag(mouseX,mouseY);
+				let newConnectorYes = new Connector(newCondition,newCondition.yes);
+				let newConnectorNo = new Connector(newCondition,newCondition.no);
+				newCondition.children.yes = newConnectorYes;
+				newCondition.children.no = newConnectorNo;
+				data.push(newCondition);
+				data.push(newConnectorNo);
+				data.push(newConnectorYes);
+
+			}
+			else if(obj.type=="result"){
+				let newResult = new Result(mouseX - 40,mouseY - 40,imageMgr.getResultImageForId(obj.id),obj.id);
+				newResult.startDrag(mouseX,mouseY);
+				data.push(newResult);
 			}
 			
 			
@@ -561,27 +498,11 @@ function mousePressed(){
 // when mouse is dragged
 function mouseDragged(){
 
+	data.filter(obj=> obj.isDragging).forEach(obj => obj.mouseDragged(mouseX,mouseY));
+	
 	data.forEach(function(obj){
 		if(obj.active)
 		{
-			if(obj.type=="yes" || obj.type == "no")
-			{
-				obj.outputInterface = {width:36,height:36};
-				obj.outputInterface.x = mouseX - obj.touchPosition.x;
-				obj.outputInterface.y = mouseY - obj.touchPosition.y;
-				
-			}
-			else {
-				obj.x = mouseX - obj.touchPosition.x;
-				obj.y = mouseY - obj.touchPosition.y;
-			}
-			
-			if(obj.parent && (obj.parent.type == "yes" || obj.parent.type == "no"))
-			{
-				obj.parent.outputInterface = {width:36,height:36};
-				obj.parent.outputInterface.x = obj.x + obj.inputInterface.x;
-				obj.parent.outputInterface.y = obj.y + obj.inputInterface.y;
-			}
 
 			if(trash.isOpen)
 			{
@@ -602,67 +523,17 @@ function mouseDragged(){
 
 // when mouseclick is released
 function mouseReleased(){
+	MagneticManager.checkCover(data,function(){
+		data.filter(obj=> obj.isDragging).forEach(obj => obj.mouseReleased(mouseX,mouseY));
+	});
+	
+	
 
 	data.forEach(function(obj){
 		if(obj.active && (trash.isOpen || checkTouch(0,0,200,1800,mouseX,mouseY)))
 		{
 			del(obj);
 		}
-		if(obj.active && obj.inputInterface && !(obj.type=="yes"||obj.type=="no"))
-		{
-			data.forEach(
-				function(obj2){
-					if(!obj2.active && obj2.outputInterface && !obj2.outputInterface.yes && obj.parent != obj2)
-					{
-						if(isOverlap(obj.inputInterface.x + obj.x,obj.inputInterface.y + obj.y,obj.inputInterface.width,obj.inputInterface.height,obj2.outputInterface.x + obj2.x, obj2.outputInterface.y + obj2.y,obj2.outputInterface.width,obj2.outputInterface.height))
-						{
-							hantei = null;
-							obj.parent = obj2;
-							if(obj2.child)
-							{
-								obj2.child.parent = null;
-								obj2.child.x += 100;
-								obj2.child.y += 100;
-							}
-							obj2.child = obj;
-							
-						}
-					}
-				}
-			)
-		}
-		else if((obj.type == "yes" || obj.type == "no") && obj.outputInterface)
-		{
-			data.forEach(
-				function(obj2){
-					if(!obj2.active && obj2.inputInterface && obj2.type != "yes" && obj2.type != "no" && obj != obj2 && obj.child != obj2)
-					{
-						if(isOverlap(obj.outputInterface.x,obj.outputInterface.y,obj.outputInterface.width,obj.outputInterface.height,obj2.inputInterface.x + obj2.x,obj2.inputInterface.y + obj2.y,obj2.inputInterface.width,obj2.inputInterface.height))
-						{
-							hantei = null;
-							obj.child = obj2;
-							if(obj2.parent)
-							{
-								obj2.parent.child = null;
-								obj2.parent.x += 100;
-								obj2.parent.y += 100;
-							}
-							obj2.parent = obj;
-							
-						}
-					}
-				}
-			)
-			if(!obj.child)
-			{
-				hantei = null;
-				obj.outputInterface = null;
-			}
-		}
-	});
-
-	data.forEach(function(obj){
-		obj.active = false;
 	});
 
 	trash.isOpen = false;
