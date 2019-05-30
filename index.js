@@ -1,30 +1,15 @@
 "use strict";
 
-Array.prototype.last = function (){ return this[this.length -1];}
-
-let imageMgr = new ImageManager("../asset");
-
-let data = [];
-
-let template = {
- "condition":{w:277,h:81, active:false, type:"condition",
-   isEliminatable: true,
-  inputInterface:{x:122.5,y:-18,width:36,height:36},
-  outputInterface:{yes:{x:58,y:63,width:36,height:3},no:{x:183,y:63,width:36,height:36}},titleAdjust:15},
- "result":{w:96,h:92.5, type:"result", active:false,  isEliminatable: true,
-  inputInterface:{x:30.5,y:-18,width:36,height:36},titleAdjust:15}
-};
-
-let toolBoxButtons = [];
+var nodeIds, shadowState, nodesArray, nodes, edgesArray, edges, network;
 
 let resultToolBox = [
-	{id:0,title: "四角形"},{id:1, title: "正三角形"},{id:2,title: "直角二等辺三角形"},{id:3,title: "二等辺三角形"},{id:4,title: "直角三角形"},{id:5,title: "三角形"},
-	{id:6,title: "正方形"},{id:7,title: "ひし形"},{id:8,title: "長方形"},{id:9,title: "平行四辺形"},{id:10,title: "台形"}
+	{id:0,label: "四角形"},{id:1, label: "正三角形"},{id:2,label: "直角二等辺三角形"},{id:3,label: "二等辺三角形"},{id:4,label: "直角三角形"},{id:5,label: "三角形"},
+	{id:6,label: "正方形"},{id:7,label: "ひし形"},{id:8,label: "長方形"},{id:9,label: "平行四辺形"},{id:10,label: "台形"}
 ];
 
 let conditionToolBox = [
-	{id:0,title:"1組の平行な辺があるか"},{id:1,title: "頂点は三つか"},{id:2 ,title:"3辺の長さは等しいか"},{id:3,title:"2辺の長さが等しいか"},{id:4,title:"4辺の長さが等しいか"},
-	{id:5,title:"直角があるか"},{id:6,title:"2組の平行な辺があるか"}
+	{id:0,label:"1組の平行な辺があるか"},{id:1,label: "頂点は三つか"},{id:2 ,label:"3辺の長さは等しいか"},{id:3,label:"2辺の長さが等しいか"},{id:4,label:"4辺の長さが等しいか"},
+	{id:5,label:"直角があるか"},{id:6,label:"2組の平行な辺があるか"}
 ];
 
 let resultAndCondition = [
@@ -41,12 +26,9 @@ let resultAndCondition = [
 	[true,false,false,false,false,false,false]//10台形
 ];
 
-
-
-var trash = {};
-var hantei = null;
-
 var projectId;
+
+var selectedSidePanelTab = 0;
 
 firebase.auth().onAuthStateChanged(function(user) {
     if (user) {
@@ -67,246 +49,6 @@ function getParam(name, url) {
     if (!results) return null;
     if (!results[2]) return '';
     return decodeURIComponent(results[2].replace(/\+/g, " "));
-}
-
-// init
-function setup(){
-
-	projectId = getParam("id");
-	if(!projectId || projectId == "")
-	{
-		//プロジェクトidが無い場合
-		return
-	}
-
-	firebase.database().ref("projects/"+projectId).once("value")
-        .then(function(snapshot) {
-		   console.log(JSON.parse(snapshot.child("code").val()));
-		   
-        });
-
-	createCanvas(document.documentElement.clientWidth, document.documentElement.clientHeight);
-	
-	data.push(new EntryPoint(500,50,imageMgr.getImageForName("purpleRect.png")));
-	
-	textAlign(CENTER, CENTER);
-	  
-	let rowHeight = 30;
-	let rowSeparate = 5;
-	
-	for(var r = 0; r < conditionToolBox.length; r++)
-	{
-		toolBoxButtons.push({x:0,y:(r + 1) * (rowHeight + rowSeparate),w:200,h:rowHeight,title:conditionToolBox[r].title,id:conditionToolBox[r].id,type:"condition"});
-	}
-	for(var r = 0; r < resultToolBox.length; r++)
-	{
-		toolBoxButtons.push({x:0,y: (r + 2 + conditionToolBox.length) * (rowHeight + rowSeparate),w:200,h:rowHeight,id:resultToolBox[r].id,title:resultToolBox[r].title,type:"result"});
-	}
-	toolBoxButtons.push({x: 0 ,y: document.documentElement.clientHeight - rowHeight - 100,w: 200,h: rowHeight,title: "判定" , type:"judge"})
-	
-
-	for(let obj in data)
-	{
-
-		if(data[obj].type == "condition")
-		{
-			makeConditionBranch(data[obj])
-		}
-		
-	}
-	trash.isOpen = false;
-	trash.open = {x:220,y:5,w:98,h:141};
-	trash.default = {x:220,y:5,w:88.5,h:117};
-
-}
-
-// drawing graphics
-function draw(){
-	clear();
-
-	drawTrash();
-	drawToolBox();
-	//data = data.sort(compareTypes);
-	data.forEach(function(obj){obj.show()});
-
-	textSize(50);
-	if (hantei != null)
-	{
-		if(hantei)
-		{
-			fill(100,200,50);
-			text("正解", document.documentElement.clientWidth - 100, document.documentElement.clientHeight - 100);
-		}
-		else
-		{
-			fill(200,100,100);
-			text("不正解", document.documentElement.clientWidth - 100, document.documentElement.clientHeight - 100);
-		}
-	}
-	
-}
-
-function drawTrash()
-{
-	if(trash.isOpen)
-	{
-		image(imageMgr.getImageForName("trashOpen.png"),trash.open.x,trash.open.y,trash.open.w,trash.open.h);
-	}
-	else {
-		image(imageMgr.getImageForName("trash.png"),trash.default.x,trash.default.y,trash.default.w,trash.default.h);
-	}
-}
-
-function makeConditionBranch(obj)
-{
-	let conditionYes = {x:0, y:0,w:35, h:35,active:false,
-		inputInterface: {x:0,y:0,width:35,height:35},type:"yes"};
-	let conditionNo = {x:0, y:0, w:35, h:35,active:false,
-		inputInterface: {x:0,y:0,width:35,height:35},type:"no"};
-
-	obj.yes = conditionYes;
-	obj.no = conditionNo;
-	conditionYes.parent = obj;
-	conditionNo.parent = obj;
-
-	data.push(conditionNo);
-	data.push(conditionYes);
-	
-}
-
-function drawToolBox()
-{
-	fill(200, 200, 200, 255);
-	rect(0, 0, 200, document.documentElement.clientHeight);
-	let rowHeight = 40;
-	let rowSeparate = 5;
-	textSize(13);
-	fill(255, 255, 255, 255);
-	let conditionTextPos = getRectCenter(0,0,200,40);
-	text("condition",conditionTextPos.x,conditionTextPos.y);
-	let resultTextPos = getRectCenter(0,(conditionToolBox.length + 1) * (rowHeight + rowSeparate),200,40);
-	text("result",resultTextPos.x,resultTextPos.y);
-
-	toolBoxButtons.forEach(function(obj){
-		if(obj.hover)
-		{
-			fill(255,221,128);
-		}
-		else {
-			fill(255, 255, 255, 255);
-		}
-		
-		rect(obj.x, obj.y, obj.w, obj.h);
-		fill(0);
-		var pos;
-		if(obj.type == "judge")
-		{
-			pos = getRectCenter(0, obj.y, obj.w, obj.h);
-		}
-		else {
-			pos = getRectCenter(30, obj.y, obj.w - 30, obj.h);
-			if(obj.type =="condition")
-			{
-				image(imageMgr.getImageForName("smallRect.png"),5, obj.y + 5,20,20);
-			}
-			else {
-				image(imageMgr.getImageForName("smallCircle.png"),5, obj.y + 5,20,20);
-			}
-			
-		}
-		text(obj.title,pos.x,pos.y);
-		
-	});
-
-}
-
-function getRectCenter(x,y,w,h)
-{
-	return {x:x+(w/2),y:y+(h/2)};
-}
-
-function showObject(obj)
-{
-	if(obj.parent)
-	{
-		if(obj.type == "yes")
-		{
-			obj.inputInterface.x = obj.parent.outputInterface.yes.x + obj.parent.x;
-			obj.inputInterface.y = obj.parent.outputInterface.yes.y + obj.parent.y;
-		}
-		else if(obj.type == "no")
-		{
-			obj.inputInterface.x = obj.parent.outputInterface.no.x + obj.parent.x;
-			obj.inputInterface.y = obj.parent.outputInterface.no.y + obj.parent.y;
-		}
-		else if(obj.parent.type == "yes" || obj.parent.type == "no")
-		{
-			obj.parent.outputInterface.x = obj.x + obj.inputInterface.x;
-			obj.parent.outputInterface.y = obj.y + obj.inputInterface.y;
-
-		}
-		else{
-			obj.x = obj.parent.outputInterface.x + obj.parent.x - obj.inputInterface.x;
-			obj.y = obj.parent.outputInterface.y + obj.parent.y - obj.inputInterface.y;
-		}
-		
-	}
-
-	if(obj.type == "result")
-	{
-		image(imageMgr.getResultImageForId(obj.id), obj.x, obj.y, obj.w,obj.h);
-	}
-	else if(obj.type == "condition")
-	{
-		image(imageMgr.getImageForName("orangeRect.png"), obj.x, obj.y, obj.w,obj.h);
-	}
-	else if(obj.type == "entryPoint")
-	{
-		image(imageMgr.getImageForName("purpleRect.png"), obj.x, obj.y, obj.w,obj.h);
-	}
-
-	if(obj.type == "yes" || obj.type == "no")
-	{
-		if(obj.type == "yes")
-		{
-			fill(0, 200, 0);
-		}
-		else if(obj.type == "no"){
-			fill(200, 0, 0);
-		}
-		
-		ellipse(obj.inputInterface.x + 18, obj.inputInterface.y + 18, obj.inputInterface.width, obj.inputInterface.height);
-
-		if(!obj.child && !obj.active)
-		{
-			obj.outputInterface = null;
-		}
-
-		if(obj.outputInterface)
-		{
-			ellipse(obj.outputInterface.x + 18, obj.outputInterface.y + 18, obj.outputInterface.width, obj.outputInterface.height);
-			if(obj.type == "yes")
-		{
-			stroke(0, 200, 0);
-		}
-		else if(obj.type == "no"){
-			stroke(200, 0, 0);
-		}
-		line(obj.inputInterface.x + 18, obj.inputInterface.y + 18, obj.outputInterface.x + 18, obj.outputInterface.y + 18);
-		noStroke();
-		
-		}
-		
-	}
-
-	if(obj.title && obj.type != "result")
-	{
-		fill(255);
-		textSize(15);
-		let pos = getRectCenter(obj.x,obj.y,obj.w,obj.h + obj.titleAdjust);
-		text(obj.title,pos.x,pos.y);
-	}
-	
 }
 
 function tappedJudgeButton()
@@ -458,152 +200,72 @@ function getSimpleStructData(obj)
 	return result;
 }
 
-// when mouse is pressed
-function mousePressed(){
-
-	data.forEach(obj=> obj.mousePressed(mouseX,mouseY));
-	
-
-	toolBoxButtons.forEach(function(obj){
-		if(checkTouch(obj.x,obj.y,obj.w,obj.h,mouseX,mouseY))
-		{
-			if(obj.type == "judge")
-			{
-				tappedJudgeButton();
-			}
-			else if(obj.type == "condition"){
-				let newCondition = new Condition(mouseX - 40,mouseY - 40,imageMgr.getImageForName("orangeRect.png"),obj.title,obj.id);
-				newCondition.startDrag(mouseX,mouseY);
-				let newConnectorYes = new Connector(newCondition,newCondition.yes);
-				let newConnectorNo = new Connector(newCondition,newCondition.no);
-				newCondition.children.yes = newConnectorYes;
-				newCondition.children.no = newConnectorNo;
-				data.push(newCondition);
-				data.push(newConnectorNo);
-				data.push(newConnectorYes);
-
-			}
-			else if(obj.type=="result"){
-				let newResult = new Result(mouseX - 40,mouseY - 40,imageMgr.getResultImageForId(obj.id),obj.id);
-				newResult.startDrag(mouseX,mouseY);
-				data.push(newResult);
-			}
-			
-			
-		}
-	});
-}
-
-
-// when mouse is dragged
-function mouseDragged(){
-
-	data.filter(obj=> obj.isDragging).forEach(obj => obj.mouseDragged(mouseX,mouseY));
-	
-	data.forEach(function(obj){
-		if(obj.active)
-		{
-
-			if(trash.isOpen)
-			{
-				trash.isOpen = checkTouch(trash.open.x,trash.open.y,trash.open.w,trash.open.h,mouseX,mouseY);
-			}
-			else
-			{
-				trash.isOpen = checkTouch(trash.default.x,trash.default.y,trash.default.w,trash.default.h,mouseX,mouseY);
-			}
-			
-		}
-	});
-
-	mouseMoved();
-	return false;
-}
-
-
-// when mouseclick is released
-function mouseReleased(){
-	MagneticManager.checkCover(data,function(){
-		data.filter(obj=> obj.isDragging).forEach(obj => obj.mouseReleased(mouseX,mouseY));
-	});
-	
-	
-
-	data.forEach(function(obj){
-		if(obj.active && (trash.isOpen || checkTouch(0,0,200,1800,mouseX,mouseY)))
-		{
-			del(obj);
-		}
-	});
-
-	trash.isOpen = false;
-
-	
-}
-
-function mouseMoved()
-{
-	toolBoxButtons.forEach(function(obj){
-		if(checkTouch(obj.x,obj.y,obj.w,obj.h,mouseX,mouseY))
-		{
-			obj.hover = true;	
-		}
-		else{
-			obj.hover = false;
-		}
-	});
-}
-
-function isOverlap(x1,y1,w1,h1,x2,y2,w2,h2)
-{
-	if(Math.abs((x1 + w1 / 2)-(x2 + w2 / 2)) < w1 / 2 + w2 / 2 && Math.abs((y1 + h1 / 2)-(y2 + h2 / 2)) < h1 / 2 + h2 / 2)
+function showLeftSideMenu(selected) {
+	$("#leftSidePanelList").empty();
+	selectedSidePanelTab = selected;
+	var data;
+	if(selectedSidePanelTab == 0)
 	{
-		return true;
+		$("#selectorContainer .selectorButton:first").addClass("selectorButton-selected");
+		$("#selectorContainer .selectorButton:nth-child(2)").removeClass("selectorButton-selected");
+		data = conditionToolBox;
 	}
 	else {
-		return false;
+		$("#selectorContainer .selectorButton:nth-child(2)").addClass("selectorButton-selected");
+		$("#selectorContainer .selectorButton:first").removeClass("selectorButton-selected");
+		data = resultToolBox;
+	}
+
+	for (var item in data) {
+		$("#leftSidePanelList").append('<li class="leftSidePanelListItem"  onclick="addObject('+data[item].id+');">'+ data[item].label +'</li>')
 	}
 }
 
-function checkTouch(x1,y1,w1,h1,mouseX,mouseY)
-{
-	return (x1 < mouseX && mouseX < (x1 + w1) && y1 < mouseY && mouseY < (y1 + h1));
-}
-
-function getTouchPosition(x,y,mouseX,mouseY)
-{
-	return {x:mouseX-x,y:mouseY-y};
-}
-
-function del(obj)
-{
-	if(obj.isEliminatable == false)
+function addObject(item) {
+	if(selectedSidePanelTab == 0)
 	{
-		return;
+		nodes.add({id:(Math.random() * 1e7).toString(32),label:conditionToolBox[item].label});
 	}
-
-	 if(obj.child)
-	{
-		del(obj.child)
-	}
-	if(obj.yes)
-	{
-		del(data.filter(n=> n === obj.yes)[0])
-	}
-	if(obj.no)
-	{
-		del(data.filter(n=> n === obj.no)[0])
-	}
-	if(obj.parent)
-	{
-		obj.parent.child = null;
+	else {
+		nodes.add({id:(Math.random() * 1e7).toString(32),label:resultToolBox[item].label, shape: 'box'});
 	}
 	
-	data = data.filter(n => n != obj);
 }
 
-function compareTypes(a,b)
-{
-	let typeDic = {result:2,entryPoint:2,condition:2,yes:3,no:4}
-	return typeDic[a.type] - typeDic[b.type]
-}
+$(function() {
+
+	showLeftSideMenu(0);
+
+	 // create an array with nodes
+	nodes = new vis.DataSet(conditionToolBox);
+	 
+// create an array with edges
+	edges = new vis.DataSet([
+		{from: 1, to: 3},
+		{from: 1, to: 2},
+		{from: 2, to: 4},
+		{from: 2, to: 5}
+	]);
+
+	// provide the data in the vis format
+	var data = {
+			nodes: nodes,
+			edges: edges
+	};
+	var options = {
+		layout:{
+			hierarchical: {
+				sortMethod: "directed"
+			}
+		},
+		edges: {
+			arrows: {to: true}
+		},
+		manipulation: {
+			enabled: true
+		}
+	};
+
+	// initialize your network!
+	network = new vis.Network(document.getElementById('network'), data, options);
+});

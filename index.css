@@ -1,0 +1,138 @@
+#network {
+    width: 100%;
+    height: 100%;
+}
+
+body, html {
+    height: 100%
+}
+
+#container-ext {
+    background-color: lightgray;
+    height: 90vh;
+    position: relative;
+}
+
+#leftSidePanel {
+    height: 80vh;
+    width: 18vw;
+    position: absolute;
+    top: 5vh;
+    left: 0;
+}
+
+#validateButtonContainer {
+    height: 15vh;
+    width: 15vw;
+    position: absolute;
+    top: 0;
+    right: 3vw;
+}
+
+#validateButtonRope {
+    height: 5vh;
+    background-color: #BFE892;
+    width: 10px;
+    margin-top: 0;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+#startButton{
+    width: 10vw;
+    position: absolute;
+    margin-left: 2.5vw;
+    margin-right: 2.5vw;
+    margin-top: -5vh;
+}
+
+#startButton:hover {
+    cursor: pointer;
+    filter: drop-shadow(25px 0 25px rgba(0,0,0,0.1));
+}
+
+#validateResult {
+    width: 15vw;
+    position: absolute;
+    margin-top: -5vh;
+}
+
+#validateResult:hover {
+    cursor: pointer;
+    filter: drop-shadow(25px 0 25px rgba(0,0,0,0.1));
+}
+
+.leftSideInnerPanel {
+    background-color: rgba(255,255,255,0.8);
+    filter: drop-shadow(25px 0 25px rgba(0,0,0,0.1));
+    border-radius: 0 24px 24px 0;
+    position: relative;
+    top: 0;
+    left: 0;
+    right: 3vw;
+    bottom: 0;
+    height: 100%;
+    margin-right: 3vw;
+    margin-bottom: 0;
+    overflow: scroll;
+}
+
+#selectorContainer {
+    width: 3vw;
+    right: 0;
+    height: 100%;
+    top: 0;
+    position: absolute;
+}
+
+.selectorButton {
+    width: 100%;
+    height: 15vh;
+    margin-top: 5vh;
+    border-radius: 0 16px 16px 0;
+    background-color: rgba(185, 185, 185, 0.8);
+    filter: drop-shadow(25px 0 25px rgba(0,0,0,0.1));
+}
+
+.selectorButton:hover {
+    background-color: white !important;
+    cursor: pointer;
+}
+
+.selectorButton-selected {
+    background-color: rgba(255,255,255,0.8) !important;
+}
+
+.selectorButtonImage {
+    max-height: 30%;
+    max-width: 80%;
+    margin-left: auto;
+    margin-right: auto;
+    margin-top: 1vh;
+}
+
+.writingmode {
+    writing-mode: vertical-rl;
+    line-height: 3vw;
+}
+
+.hidden {
+    display: none;
+}
+
+.leftSidePanelListItem {
+    list-style: none;
+    height: 80px;
+    display: inline-block;
+    line-height: 80px;
+    width: 100%;
+}
+
+.leftSidePanelListItem:hover {
+    background-color: white;
+    cursor: pointer;
+}
+
+#leftSidePanelList {
+    padding: 8px;
+}

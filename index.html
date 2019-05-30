@@ -1,15 +1,22 @@
 <!DOCTYPE html>
 <html lang="ja">
+
 <head>
-  <meta charset="UTF-8">
-  <title>Yattoko - 二分木分類システム</title>
-	<script   src="https://code.jquery.com/jquery-3.3.1.min.js"   integrity="sha256-FgpCb/KJQlLNfOu91ta32o/NMZxltwRo8QtmkMRdAu8="   crossorigin="anonymous"></script>
-	<script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/0.7.3/p5.js"></script>
-	<script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/0.7.3/addons/p5.dom.js"></script>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+	<!-- Bootstrap CSS -->
+	<link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.2.1/css/bootstrap.min.css"
+		integrity="sha384-GJzZqFGwb1QTTN6wy59ffF1BuGJpLSa9DkKMp0DgiMDm4iYMj70gZWKYbI706tWS" crossorigin="anonymous">
+	<title>Yattoko - 二分木分類システム</title>
+	<script src="https://code.jquery.com/jquery-3.3.1.min.js"
+		integrity="sha256-FgpCb/KJQlLNfOu91ta32o/NMZxltwRo8QtmkMRdAu8=" crossorigin="anonymous"></script>
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/vis/4.21.0/vis.min.js"></script>
+	<link href="https://cdnjs.cloudflare.com/ajax/libs/vis/4.21.0/vis.min.css" rel="stylesheet" type="text/css" />
 	<script src="https://www.gstatic.com/firebasejs/5.5.2/firebase-app.js"></script>
 	<script src="https://www.gstatic.com/firebasejs/5.5.2/firebase-auth.js"></script>
 	<script src="https://www.gstatic.com/firebasejs/5.5.2/firebase-database.js"></script>
 	<script src="https://www.gstatic.com/firebasejs/5.5.2/firebase-storage.js"></script>
+	<link href="index.css" rel="stylesheet" type="text/css" />
 	<script>
 		// Initialize Firebase
 		var config = {
@@ -22,10 +29,67 @@
 		};
 		firebase.initializeApp(config);
 	</script>
-	<script src="library.js" type="text/javascript"></script>
 	<script src="index.js" type="text/javascript"></script>
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.6/umd/popper.min.js"
+		integrity="sha384-wHAiFfRlMFy6i5SRaxvfOCifBUQy1xHdJ/yoi7FRNXMRBu5WHdZYu1hA6ZOblgut"
+		crossorigin="anonymous"></script>
+	<script src="https://stackpath.bootstrapcdn.com/bootstrap/4.2.1/js/bootstrap.min.js"
+		integrity="sha384-B0UglyR+jN6CkvvICOB2joaf5I4l3gm9GU6Hc1og6Ls7i6U/mkkaduKaBhlAXv9k"
+		crossorigin="anonymous"></script>
 </head>
+
 <body>
-	<!--p class="box"></-->
+	<nav class="navbar navbar-expand-lg navbar-light" style="background-color: #f7f7f7">
+		<div class="container">
+
+			<a class="navbar-brand" href="index.html">
+				<img src="asset/icon.jpg" width="30" height="30" alt="">
+				Kasgai</a>
+			<button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarNavAltMarkup"
+				aria-controls="navbarNavAltMarkup" aria-expanded="false" aria-label="Toggle navigation">
+				<span class="navbar-toggler-icon"></span>
+			</button>
+			<div class="collapse navbar-collapse" id="navbarNavAltMarkup">
+				<div class="navbar-nav mr-auto">
+					<span class="navbar-text" id="greeting"></span>
+				</div>
+				<div class="navbar-nav">
+					<a class="nav-item nav-link" href="logout.html">ログアウト</a>
+				</div>
+			</div>
+		</div>
+	</nav>
+		<div id="container-ext">
+			<div id="network">
+				
+			</div>
+			<div id="leftSidePanel">
+				<div class="leftSideInnerPanel">
+					<ul id="leftSidePanelList">
+						<!--ここにボタンが入る-->
+					</ul>
+				</div>
+				<div id="selectorContainer">
+					<div class="selectorButton writingmode selectorButton-selected" onclick="showLeftSideMenu(0);">
+						<img src="asset/dia.png" class="selectorButtonImage">
+						Condition
+					</div>
+					<div class="selectorButton writingmode"　 onclick="showLeftSideMenu(1);">
+						<img src="asset/shape.png" class="selectorButtonImage">
+						Shape
+					</div>
+				</div>
+				
+			
+			
+			</div>
+			<div id="validateButtonContainer">
+				<div id="validateButtonRope"></div>
+				<img id="startButton" src="asset/start.png">
+				<img id="validateResult" class="hidden" src="asset/succeeded.png">
+			</div>
+		</div>
+	</div>
 </body>
+
 </html>
