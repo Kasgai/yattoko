@@ -2,7 +2,25 @@
 
 var nodeIds, shadowState, nodesArray, nodes, edgesArray, edges, network;
 
-let resultToolBox = [
+let ObjectKind = {
+	Target: "TARGET",
+	Condition: "CONDITION",
+	EntryPoint: "ENTRY POINT"
+}
+
+let EdgeType = {
+	Yes: "YES",
+	No: "NO",
+	Entry: ""
+}
+
+var addEdgeTmp;
+/*{
+	from: id
+	type EdgeType
+}*/
+
+let targetToolBox = [
 	{id:0,label: "四角形"},{id:1, label: "正三角形"},{id:2,label: "直角二等辺三角形"},{id:3,label: "二等辺三角形"},{id:4,label: "直角三角形"},{id:5,label: "三角形"},
 	{id:6,label: "正方形"},{id:7,label: "ひし形"},{id:8,label: "長方形"},{id:9,label: "平行四辺形"},{id:10,label: "台形"}
 ];
@@ -12,7 +30,7 @@ let conditionToolBox = [
 	{id:5,label:"直角があるか"},{id:6,label:"2組の平行な辺があるか"}
 ];
 
-let resultAndCondition = [
+let targetAndCondition = [
 	[false,false,false,false,false,false,false],//0
 	[false,true,true,true,false,false,false],//1
 	[false,true,false,true,false,true,false],//2
@@ -45,10 +63,10 @@ function getParam(name, url) {
     if (!url) url = window.location.href;
     name = name.replace(/[\[\]]/g, "\\$&");
     var regex = new RegExp("[?&]" + name + "(=([^&#]*)|&|#|$)"),
-        results = regex.exec(url);
-    if (!results) return null;
-    if (!results[2]) return '';
-    return decodeURIComponent(results[2].replace(/\+/g, " "));
+        targets = regex.exec(url);
+    if (!targets) return null;
+    if (!targets[2]) return '';
+    return decodeURIComponent(targets[2].replace(/\+/g, " "));
 }
 
 function tappedJudgeButton()
@@ -60,10 +78,10 @@ function tappedJudgeButton()
 		let entryPointData =  outputData.filter(e => e.type == "entryPoint")[0];
 
 		let simpleStruct = getSimpleStructData(entryPointData)
-		let usedResultIds = JSON.stringify(usingAllResults(simpleStruct).sort());
-		let resultIds = JSON.stringify(resultToolBox.map(function(e){return e.id}).sort());
+		let usedtargetIds = JSON.stringify(usingAlltargets(simpleStruct).sort());
+		let targetIds = JSON.stringify(targetToolBox.map(function(e){return e.id}).sort());
 
-		hantei = (isAllCorrect(simpleStruct,[],[]) && isUsingAllBranch(simpleStruct) && usedResultIds == resultIds);
+		hantei = (isAllCorrect(simpleStruct,[],[]) && isUsingAllBranch(simpleStruct) && usedtargetIds == targetIds);
 		firebase.database().ref("projects/"+projectId).update({
 			code:JSON.stringify(simpleStruct)
 		});
@@ -103,18 +121,18 @@ function isAllCorrect(obj,falseQuestions,trueQuestions)
 			return false;
 		}
 	}
-	if(obj.type == "result")
+	if(obj.type == "target")
 	{
 		for(var falseQ = 0; falseQ < falseQuestions.length; falseQ++)
 		{
-			if(resultAndCondition[obj.id][falseQuestions[falseQ]])
+			if(targetAndCondition[obj.id][falseQuestions[falseQ]])
 			{
 				return false;
 			}
 		}
 		for(var trueQ = 0; trueQ < trueQuestions.length; trueQ++)
 		{
-			if(!resultAndCondition[obj.id][trueQuestions[trueQ]])
+			if(!targetAndCondition[obj.id][trueQuestions[trueQ]])
 			{
 				return false;
 			}
@@ -133,7 +151,7 @@ function isUsingAllBranch(obj)
 	{
 		return isUsingAllBranch(obj.child);
 	}
-	else if(!obj.yes && !obj.no) //resultの場合
+	else if(!obj.yes && !obj.no) //targetの場合
 	{
 		return true;
 	}
@@ -143,61 +161,61 @@ function isUsingAllBranch(obj)
 	}
 }
 
-function usingAllResults(obj)
+function usingAlltargets(obj)
 {
-	var results = []
+	var targets = []
 	if(obj.yes || obj.no)
 	{
 		if(obj.yes)
 		{
-			results = results.concat(usingAllResults(obj.yes));
+			targets = targets.concat(usingAlltargets(obj.yes));
 		}
 		if(obj.no)
 		{
-			results = results.concat(usingAllResults(obj.no))
+			targets = targets.concat(usingAlltargets(obj.no))
 		}
 	}
 	else if(obj.child)
 	{
-		results = results.concat(usingAllResults(obj.child));
+		targets = targets.concat(usingAlltargets(obj.child));
 	}
-	else if(obj.type == "result")
+	else if(obj.type == "target")
 	{
 		return [obj.id]
 	}
-	return results
+	return targets
 
 }
 
 function getSimpleStructData(obj)
 {
-	var result = {};
+	var target = {};
 	if(obj.id != null)
 	{
-		result.id = obj.id
+		target.id = obj.id
 	}
 	if(obj.title)
 	{
-		result.title = obj.title;
+		target.title = obj.title;
 	}
 	if(obj.type)
 	{
-		result.type = obj.type;
+		target.type = obj.type;
 	}
 	if(obj.child)
 	{
-		result.child = getSimpleStructData(obj.child);
+		target.child = getSimpleStructData(obj.child);
 	}
 	if(obj.yes && obj.yes.child)
 	{
-		result.yes = getSimpleStructData(obj.yes.child);
+		target.yes = getSimpleStructData(obj.yes.child);
 	}
 	if(obj.no && obj.no.child)
 	{
-		result.no = getSimpleStructData(obj.no.child);
+		target.no = getSimpleStructData(obj.no.child);
 	}
 	
-	return result;
+	return target;
 }
 
 function showLeftSideMenu(selected) {
@@ -213,7 +231,7 @@ function showLeftSideMenu(selected) {
 	else {
 		$("#selectorContainer .selectorButton:nth-child(2)").addClass("selectorButton-selected");
 		$("#selectorContainer .selectorButton:first").removeClass("selectorButton-selected");
-		data = resultToolBox;
+		data = targetToolBox;
 	}
 
 	for (var item in data) {
@@ -224,28 +242,86 @@ function showLeftSideMenu(selected) {
 function addObject(item) {
 	if(selectedSidePanelTab == 0)
 	{
-		nodes.add({id:(Math.random() * 1e7).toString(32),label:conditionToolBox[item].label});
+		nodes.add({
+		id:(Math.random() * 1e7).toString(32),
+		label:conditionToolBox[item].label,
+		color: "#ED9A5D",
+		type: ObjectKind.Condition,
+		contentId: conditionToolBox[item].id,
+		edgeIds: []
+	});
+
 	}
 	else {
-		nodes.add({id:(Math.random() * 1e7).toString(32),label:resultToolBox[item].label, shape: 'box'});
+		nodes.add({
+		id:(Math.random() * 1e7).toString(32),
+		label:targetToolBox[item].label, shape: 'box',
+		color:"#4A90E2",
+		type: ObjectKind.Target,
+		contentId: conditionToolBox[item].id,
+		edgeIds: []
+	});
+	}
+}
+
+function closePopup() {
+	$("#popup").css("display","none");
+	$("#popupBackGround").css("display","none");
+}
+
+function addEdgeMode(from,edgeType) {
+	addEdgeTmp = {
+		from: from,
+		type: edgeType
+	};
+	closePopup();
+}
+
+function deleteNode(node) {
+	let toNode = nodes.get().find(function(elem){return elem.id == node});
+	nodes.remove({id:node});
+	for(var i in toNode.edgeIds) {
+		edges.remove({id: toNode.edgeIds[i]});
 	}
 	
+	closePopup();
+}
+
+function addEdge(to) {
+	let toNode = nodes.get().find(function(elem){return elem.id == to});
+	if(addEdgeTmp && 
+		addEdgeTmp.from != to && 
+		toNode.type != ObjectKind.EntryPoint &&
+		!edges.get().find(function(elem){return elem.to == to})
+		) {
+			let fromNode = nodes.get().find(function(elem){return elem.id == addEdgeTmp.from});
+			let edgeId = (Math.random() * 1e7).toString(32);
+		edges.add({
+			from: addEdgeTmp.from,
+			to: to,
+			type: addEdgeTmp.type,
+			id: edgeId,
+			label: addEdgeTmp.type,
+		});
+		toNode.edgeIds.push(edgeId);
+		fromNode.edgeIds.push(edgeId);
+	}
+	addEdgeTmp = null;
+	closePopup();
 }
 
 $(function() {
 
 	showLeftSideMenu(0);
 
-	 // create an array with nodes
-	nodes = new vis.DataSet(conditionToolBox);
-	 
-// create an array with edges
-	edges = new vis.DataSet([
-		{from: 1, to: 3},
-		{from: 1, to: 2},
-		{from: 2, to: 4},
-		{from: 2, to: 5}
-	]);
+	nodes = new vis.DataSet([
+		{id:(Math.random() * 1e7).toString(32),
+		color:"#9013FE",
+		label:"ENTRY POINT",
+		type: ObjectKind.EntryPoint,
+		edgeIds: []
+		}]);
+	edges = new vis.DataSet([]);
 
 	// provide the data in the vis format
 	var data = {
@@ -260,12 +336,30 @@ $(function() {
 		},
 		edges: {
 			arrows: {to: true}
-		},
-		manipulation: {
-			enabled: true
 		}
 	};
 
 	// initialize your network!
 	network = new vis.Network(document.getElementById('network'), data, options);
+
+	network.on("select",function(param) {
+		if (param.nodes.length != 0) {
+			let node = nodes.get().find(function(elem){return elem.id == param.nodes[0]});
+			$("#popupButtons").empty()
+			if(addEdgeTmp) {
+				addEdge(node.id);
+				return;
+			}
+			else if(node.type == ObjectKind.Condition) {
+				
+				$("#popupButtons").append("<li onclick='addEdgeMode(\""+node.id+"\",\""+EdgeType.Yes+"\");'>Yesのときを選ぶ</li>").append("<li onclick='addEdgeMode(\""+node.id+"\",\""+EdgeType.No+"\");'>Noのときを選ぶ</li>").append("<li onclick='deleteNode(\""+node.id+"\");'>削除</li>")		
+			} else if(node.type == ObjectKind.EntryPoint) {
+				$("#popupButtons").append("<li onclick='addEdgeMode(\""+node.id+"\",\""+EdgeType.Entry+"\");'>接続</li>");
+			}
+			$("#popupTitle").text(node.type);
+			$("#popupText").text(node.label);
+			$("#popup").css("top",param.pointer.DOM.y - 270).css("left",param.pointer.DOM.x - 276 / 2).css("display","block");
+			$("#popupBackGround").css("display","block");
+		}
+	});
 });
