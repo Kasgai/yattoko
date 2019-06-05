@@ -11,7 +11,7 @@ let ObjectKind = {
 let EdgeType = {
 	Yes: "YES",
 	No: "NO",
-	Entry: ""
+	Entry: "ENTRY"
 }
 
 var addEdgeTmp;
@@ -287,6 +287,17 @@ function deleteNode(node) {
 	closePopup();
 }
 
+function deleteEdge(nodeId,type) {
+	let node = nodes.get().find(i => i.id == nodeId);
+	let id = node[type];
+	nodes._data[nodeId][type] = null;
+	node.edgeIds = node.edgeIds.filter(i => i != id);
+	let toId = edges._data[id].to;
+	nodes._data[toId].edgeIds = 	nodes._data[toId].edgeIds.filter(i => i != id);
+	edges.remove({id: id});
+	closePopup();
+}
+
 function addEdge(to) {
 	let toNode = nodes.get().find(function(elem){return elem.id == to});
 	if(addEdgeTmp && 
@@ -303,6 +314,7 @@ function addEdge(to) {
 			id: edgeId,
 			label: addEdgeTmp.type,
 		});
+		nodes._data[addEdgeTmp.from][addEdgeTmp.type] = edgeId;
 		toNode.edgeIds.push(edgeId);
 		fromNode.edgeIds.push(edgeId);
 	}
@@ -345,16 +357,33 @@ $(function() {
 	network.on("select",function(param) {
 		if (param.nodes.length != 0) {
 			let node = nodes.get().find(function(elem){return elem.id == param.nodes[0]});
-			$("#popupButtons").empty()
+			$("#popupButtons").empty();
 			if(addEdgeTmp) {
 				addEdge(node.id);
 				return;
 			}
 			else if(node.type == ObjectKind.Condition) {
+				if(node[EdgeType.Yes]) {
+					$("#popupButtons").append("<li onclick='deleteEdge(\""+node.id+"\",\""+EdgeType.Yes+"\");'>Yesの接続を解除</li>");
+				}else {
+					$("#popupButtons").append("<li onclick='addEdgeMode(\""+node.id+"\",\""+EdgeType.Yes+"\");'>Yesのときを選ぶ</li>");
+				}
+				if(node[EdgeType.No]) {
+					$("#popupButtons").append("<li onclick='deleteEdge(\""+node.id+"\",\""+EdgeType.No+"\");'>Noの接続を解除</li>");
+				}else {
+					$("#popupButtons").append("<li onclick='addEdgeMode(\""+node.id+"\",\""+EdgeType.No+"\");'>Noのときを選ぶ</li>");
+				}
 				
-				$("#popupButtons").append("<li onclick='addEdgeMode(\""+node.id+"\",\""+EdgeType.Yes+"\");'>Yesのときを選ぶ</li>").append("<li onclick='addEdgeMode(\""+node.id+"\",\""+EdgeType.No+"\");'>Noのときを選ぶ</li>").append("<li onclick='deleteNode(\""+node.id+"\");'>削除</li>")		
+				$("#popupButtons").append("<li onclick='deleteNode(\""+node.id+"\");'>削除</li>");		
 			} else if(node.type == ObjectKind.EntryPoint) {
-				$("#popupButtons").append("<li onclick='addEdgeMode(\""+node.id+"\",\""+EdgeType.Entry+"\");'>接続</li>");
+				if(node[EdgeType.Entry]) {
+					$("#popupButtons").append("<li onclick='deleteEdge(\""+node.id+"\",\""+EdgeType.Entry+"\");'>接続を解除</li>");
+				}else {
+					$("#popupButtons").append("<li onclick='addEdgeMode(\""+node.id+"\",\""+EdgeType.Entry+"\");'>接続</li>");
+				}
+				
+			} else if(node.type == ObjectKind.Target) {
+				$("#popupButtons").append("<li onclick='deleteNode(\""+node.id+"\");'>削除</li>");		
 			}
 			$("#popupTitle").text(node.type);
 			$("#popupText").text(node.label);
