@@ -11,14 +11,133 @@ let ObjectKind = {
 let EdgeType = {
 	Yes: "YES",
 	No: "NO",
-	Entry: ""
+	Entry: "ENTRY"
 }
 
 var addEdgeTmp;
-/*{
-	from: id
-	type EdgeType
-}*/
+
+let consitions = [
+	{id:0,text:"1組の平行な辺があるか"},
+	{id:1,text: "頂点は三つか"},
+	{id:2,text:"3辺の長さは等しいか"},
+	{id:3,text:"2辺の長さが等しいか"},
+	{id:4,text:"4辺の長さが等しいか"},
+	{id:5,text:"直角があるか"},
+	{id:6,text:"2組の平行な辺があるか"}
+];
+
+let targets = [
+	{id:1,name: "正三角形",
+		condition: {
+			0: false,
+			1: true,
+			2: true,
+			3: true,
+			4: false,
+			5: false,
+			6: false
+	}},
+	{id:0,name: "四角形",
+		condition:{
+			0: false,
+			1: false,
+			2: false,
+			3: false,
+			4: false,
+			5: false,
+			6: false
+		}},
+	{id:2,name: "直角二等辺三角形",
+		condition: {
+			0: false,
+			1: true,
+			2: false,
+			3: true,
+			4: false,
+			5: true,
+			6: false
+		}},
+	{id:3,name: "二等辺三角形",
+		condition: {
+			0: false,
+			1: true,
+			2: false,
+			3: true,
+			4: false,
+			5: false,
+			6: false
+		}},
+	{id:4,name: "直角三角形",
+		condition: {
+			0: false,
+			1: true,
+			2: false,
+			3: false,
+			4: false,
+			5: true,
+			6: false
+		}},
+	{id:5,name: "三角形",
+		condition: {
+			0: false,
+			1: true,
+			2: false,
+			3: false,
+			4: false,
+			5: false,
+			6: false
+		}},
+	{id:6,name: "正方形",
+		condition: {
+			0: true,
+			1: false,
+			2: true,
+			3: true,
+			4: true,
+			5: true,
+			6: true
+		}},
+	{id:7,name: "ひし形",
+		condition: {
+			0: true,
+			1: false,
+			2: true,
+			3: true,
+			4: true,
+			5: false,
+			6: true
+		}},
+	{id:8,name: "長方形",
+		condition: {
+			0: true,
+			1: false,
+			2: false,
+			3: true,
+			4: false,
+			5: true,
+			6: true
+		}},
+	{id:9,name: "平行四辺形",
+		condition: {
+			0: true,
+			1: false,
+			2: false,
+			3: true,
+			4: false,
+			5: false,
+			6: true
+		}},
+	{id:10,name: "台形",
+		condition: {
+			0: true,
+			1: false,
+			2: false,
+			3: false,
+			4: false,
+			5: false,
+			6: false
+		}}
+];
 
 let targetToolBox = [
 	{id:0,label: "四角形"},{id:1, label: "正三角形"},{id:2,label: "直角二等辺三角形"},{id:3,label: "二等辺三角形"},{id:4,label: "直角三角形"},{id:5,label: "三角形"},
@@ -51,13 +170,50 @@ var selectedSidePanelTab = 0;
 firebase.auth().onAuthStateChanged(function(user) {
     if (user) {
       // ...
-      
+			console.log(getParam("id",indow.location.href));
     } else {
       // User is signed out.
       // ...
       window.location.href = '../login.html';
     }
-  });
+	});
+	
+function save() {
+	let entryPointId = nodes.get().find(node=> node.type == ObjectKind.EntryPoint).id;
+	let json = translateToServerData(entryPointId);
+	firebase.database().ref("projects/"+projectId).update({
+		code:JSON.stringify(json)
+	});
+	console.log(json);
+}
+
+function translateToServerData(id) {
+	let node = nodes._data[id];
+
+	if(node.type == ObjectKind.EntryPoint) {
+		if(node.edgeIds && node.edgeIds.length != 0) {
+			return translateToServerData(edges._data[node.edgeIds[0]].to);
+		}
+		else {
+			return {};
+		}
+	}
+
+	var returnValue = {
+		link: node.link,
+		isCondition: node.isCondition
+	}
+
+	if(node[EdgeType.Yes]) {
+		returnValue.yes = translateToServerData(edges._data[node[EdgeType.Yes]].to);
+	}
+
+	if(node[EdgeType.No]) {
+		returnValue.no = translateToServerData(edges._data[node[EdgeType.No]].to);
+	}
+
+	return returnValue;
+}
 
 function getParam(name, url) {
     if (!url) url = window.location.href;
@@ -247,7 +403,8 @@ function addObject(item) {
 		label:conditionToolBox[item].label,
 		color: "#ED9A5D",
 		type: ObjectKind.Condition,
-		contentId: conditionToolBox[item].id,
+		link: conditionToolBox[item].id,
+		isCondition: true,
 		edgeIds: []
 	});
 
@@ -258,7 +415,8 @@ function addObject(item) {
 		label:targetToolBox[item].label, shape: 'box',
 		color:"#4A90E2",
 		type: ObjectKind.Target,
-		contentId: conditionToolBox[item].id,
+		link: conditionToolBox[item].id,
+		isCondition: false,
 		edgeIds: []
 	});
 	}
@@ -287,6 +445,17 @@ function deleteNode(node) {
 	closePopup();
 }
 
+function deleteEdge(nodeId,type) {
+	let node = nodes.get().find(i => i.id == nodeId);
+	let id = node[type];
+	nodes._data[nodeId][type] = null;
+	node.edgeIds = node.edgeIds.filter(i => i != id);
+	let toId = edges._data[id].to;
+	nodes._data[toId].edgeIds = 	nodes._data[toId].edgeIds.filter(i => i != id);
+	edges.remove({id: id});
+	closePopup();
+}
+
 function addEdge(to) {
 	let toNode = nodes.get().find(function(elem){return elem.id == to});
 	if(addEdgeTmp && 
@@ -303,6 +472,7 @@ function addEdge(to) {
 			id: edgeId,
 			label: addEdgeTmp.type,
 		});
+		nodes._data[addEdgeTmp.from][addEdgeTmp.type] = edgeId;
 		toNode.edgeIds.push(edgeId);
 		fromNode.edgeIds.push(edgeId);
 	}
@@ -345,16 +515,32 @@ $(function() {
 	network.on("select",function(param) {
 		if (param.nodes.length != 0) {
 			let node = nodes.get().find(function(elem){return elem.id == param.nodes[0]});
-			$("#popupButtons").empty()
+			$("#popupButtons").empty();
 			if(addEdgeTmp) {
 				addEdge(node.id);
 				return;
 			}
 			else if(node.type == ObjectKind.Condition) {
+				if(node[EdgeType.Yes]) {
+					$("#popupButtons").append("<li onclick='deleteEdge(\""+node.id+"\",\""+EdgeType.Yes+"\");'>Yesの接続を解除</li>");
+				}else {
+					$("#popupButtons").append("<li onclick='addEdgeMode(\""+node.id+"\",\""+EdgeType.Yes+"\");'>Yesのときを選ぶ</li>");
+				}
+				if(node[EdgeType.No]) {
+					$("#popupButtons").append("<li onclick='deleteEdge(\""+node.id+"\",\""+EdgeType.No+"\");'>Noの接続を解除</li>");
+				}else {
+					$("#popupButtons").append("<li onclick='addEdgeMode(\""+node.id+"\",\""+EdgeType.No+"\");'>Noのときを選ぶ</li>");
+				}
 				
-				$("#popupButtons").append("<li onclick='addEdgeMode(\""+node.id+"\",\""+EdgeType.Yes+"\");'>Yesのときを選ぶ</li>").append("<li onclick='addEdgeMode(\""+node.id+"\",\""+EdgeType.No+"\");'>Noのときを選ぶ</li>").append("<li onclick='deleteNode(\""+node.id+"\");'>削除</li>")		
+				$("#popupButtons").append("<li onclick='deleteNode(\""+node.id+"\");'>削除</li>");		
 			} else if(node.type == ObjectKind.EntryPoint) {
-				$("#popupButtons").append("<li onclick='addEdgeMode(\""+node.id+"\",\""+EdgeType.Entry+"\");'>接続</li>");
+				if(node[EdgeType.Entry]) {
+					$("#popupButtons").append("<li onclick='deleteEdge(\""+node.id+"\",\""+EdgeType.Entry+"\");'>接続を解除</li>");
+				}else {
+					$("#popupButtons").append("<li onclick='addEdgeMode(\""+node.id+"\",\""+EdgeType.Entry+"\");'>接続</li>");
+				}
+			} else if(node.type == ObjectKind.Target) {
+				$("#popupButtons").append("<li onclick='deleteNode(\""+node.id+"\");'>削除</li>");		
 			}
 			$("#popupTitle").text(node.type);
 			$("#popupText").text(node.label);
