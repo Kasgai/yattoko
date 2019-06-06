@@ -2,6 +2,8 @@
 
 var nodeIds, shadowState, nodesArray, nodes, edgesArray, edges, network;
 
+let sampleData = "{\"link\":4,\"isCondition\":true,\"yes\":{\"link\":3,\"isCondition\":true},\"no\":{\"link\":4,\"isCondition\":true,\"yes\":{\"link\":2,\"isCondition\":false}}}"
+
 let ObjectKind = {
 	Target: "TARGET",
 	Condition: "CONDITION",
@@ -170,14 +172,44 @@ var selectedSidePanelTab = 0;
 firebase.auth().onAuthStateChanged(function(user) {
     if (user) {
       // ...
-			console.log(getParam("id",indow.location.href));
+			projectId = getParam("id",window.location.href);
+			load();
     } else {
       // User is signed out.
       // ...
       window.location.href = '../login.html';
     }
+});
+
+function load() {
+	firebase.database().ref('projects/' + projectId).once('value').then(function(snapshot) {
+		console.log(snapshot.val().code);
+		let data = JSON.parse(snapshot.val().code);
+		let entryPointId = nodes.get()[0].id;
+		addToNodes(data,entryPointId)
 	});
 	
+	
+}
+
+function addToNodes(node,parent) {
+	let newId = addObject(node.link,node.isCondition);
+	addToEdges(parent,newId,EdgeType.Entry);
+	if(node.yes) addToNodes(node.yes,newId);
+	if(node.no) addToNodes(node.no,newId);
+}
+
+function addToEdges(from, to, type) {
+	let edgeId = (Math.random() * 1e7).toString(32);
+	edges.add({
+		from: from,
+		to: to,
+		type: type,
+		id: edgeId,
+		label: type,
+	});
+}
+
 function save() {
 	let entryPointId = nodes.get().find(node=> node.type == ObjectKind.EntryPoint).id;
 	let json = translateToServerData(entryPointId);
@@ -396,29 +428,34 @@ function showLeftSideMenu(selected) {
 }
 
 function addObject(item) {
-	if(selectedSidePanelTab == 0)
+	addObject(item,selectedSidePanelTab == 0)
+}
+
+function addObject(item,isCondition){
+	let id = (Math.random() * 1e7).toString(32)
+	if(isCondition)
 	{
 		nodes.add({
-		id:(Math.random() * 1e7).toString(32),
+		id: id,
 		label:conditionToolBox[item].label,
 		color: "#ED9A5D",
 		type: ObjectKind.Condition,
 		link: conditionToolBox[item].id,
 		isCondition: true,
 		edgeIds: []
-	});
-
-	}
-	else {
+		});
+		return id;
+	}else {
 		nodes.add({
-		id:(Math.random() * 1e7).toString(32),
+		id: id,
 		label:targetToolBox[item].label, shape: 'box',
 		color:"#4A90E2",
 		type: ObjectKind.Target,
 		link: conditionToolBox[item].id,
 		isCondition: false,
 		edgeIds: []
-	});
+		});
+		return id;
 	}
 }
 
@@ -492,6 +529,8 @@ $(function() {
 		edgeIds: []
 		}]);
 	edges = new vis.DataSet([]);
+
+	load();
 
 	// provide the data in the vis format
 	var data = {
