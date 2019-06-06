@@ -2,8 +2,6 @@
 
 var nodeIds, shadowState, nodesArray, nodes, edgesArray, edges, network;
 
-let sampleData = "{\"link\":4,\"isCondition\":true,\"yes\":{\"link\":3,\"isCondition\":true},\"no\":{\"link\":4,\"isCondition\":true,\"yes\":{\"link\":2,\"isCondition\":false}}}"
-
 let ObjectKind = {
 	Target: "TARGET",
 	Condition: "CONDITION",
@@ -183,10 +181,11 @@ firebase.auth().onAuthStateChanged(function(user) {
 
 function load() {
 	firebase.database().ref('projects/' + projectId).once('value').then(function(snapshot) {
-		console.log(snapshot.val().code);
-		let data = JSON.parse(snapshot.val().code);
-		let entryPointId = nodes.get()[0].id;
-		addToNodes(data,entryPointId)
+		if(snapshot.val().code && snapshot.val().code != "{}") {
+			let data = JSON.parse(snapshot.val().code);
+			let entryPointId = nodes.get()[0].id;
+			addToNodes(data,entryPointId);
+		}
 	});
 	
 	
@@ -194,7 +193,7 @@ function load() {
 
 function addToNodes(node,parent) {
 	let newId = addObject(node.link,node.isCondition);
-	addToEdges(parent,newId,EdgeType.Entry);
+	nodes._data[parent].edgeIds.push(addToEdges(parent,newId,EdgeType.Entry));
 	if(node.yes) addToNodes(node.yes,newId);
 	if(node.no) addToNodes(node.no,newId);
 }
@@ -208,6 +207,7 @@ function addToEdges(from, to, type) {
 		id: edgeId,
 		label: type,
 	});
+	return edgeId;
 }
 
 function save() {
@@ -423,12 +423,13 @@ function showLeftSideMenu(selected) {
 	}
 
 	for (var item in data) {
-		$("#leftSidePanelList").append('<li class="leftSidePanelListItem"  onclick="addObject('+data[item].id+');">'+ data[item].label +'</li>')
+		$("#leftSidePanelList").append('<li class="leftSidePanelListItem"  onclick="tapToolbox('+data[item].id+');">'+ data[item].label +'</li>')
 	}
 }
 
-function addObject(item) {
-	addObject(item,selectedSidePanelTab == 0)
+function tapToolbox(item) {
+	addObject(item,selectedSidePanelTab == 0);
+	save();
 }
 
 function addObject(item,isCondition){
@@ -478,7 +479,7 @@ function deleteNode(node) {
 	for(var i in toNode.edgeIds) {
 		edges.remove({id: toNode.edgeIds[i]});
 	}
-	
+	save();
 	closePopup();
 }
 
@@ -490,6 +491,7 @@ function deleteEdge(nodeId,type) {
 	let toId = edges._data[id].to;
 	nodes._data[toId].edgeIds = 	nodes._data[toId].edgeIds.filter(i => i != id);
 	edges.remove({id: id});
+	save();
 	closePopup();
 }
 
@@ -514,6 +516,7 @@ function addEdge(to) {
 		fromNode.edgeIds.push(edgeId);
 	}
 	addEdgeTmp = null;
+	save();
 	closePopup();
 }
 
@@ -529,8 +532,6 @@ $(function() {
 		edgeIds: []
 		}]);
 	edges = new vis.DataSet([]);
-
-	load();
 
 	// provide the data in the vis format
 	var data = {
