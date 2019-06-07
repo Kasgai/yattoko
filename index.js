@@ -1,6 +1,6 @@
 "use strict";
 
-var nodeIds, shadowState, nodesArray, nodes, edgesArray, edges, network;
+var nodes, edges, network, addEdgeTmp, projectId, selectedSidePanelTab = 0;
 
 let ObjectKind = {
 	Target: "TARGET",
@@ -14,9 +14,7 @@ let EdgeType = {
 	Entry: "ENTRY"
 }
 
-var addEdgeTmp;
-
-let consitions = [
+let conditions = [
 	{id:0,text:"1組の平行な辺があるか"},
 	{id:1,text: "頂点は三つか"},
 	{id:2,text:"3辺の長さは等しいか"},
@@ -27,16 +25,6 @@ let consitions = [
 ];
 
 let targets = [
-	{id:1,name: "正三角形",
-		condition: {
-			0: false,
-			1: true,
-			2: true,
-			3: true,
-			4: false,
-			5: false,
-			6: false
-	}},
 	{id:0,name: "四角形",
 		condition:{
 			0: false,
@@ -47,6 +35,16 @@ let targets = [
 			5: false,
 			6: false
 		}},
+	{id:1,name: "正三角形",
+		condition: {
+			0: false,
+			1: true,
+			2: true,
+			3: true,
+			4: false,
+			5: false,
+			6: false
+	}},
 	{id:2,name: "直角二等辺三角形",
 		condition: {
 			0: false,
@@ -139,34 +137,6 @@ let targets = [
 		}}
 ];
 
-let targetToolBox = [
-	{id:0,label: "四角形"},{id:1, label: "正三角形"},{id:2,label: "直角二等辺三角形"},{id:3,label: "二等辺三角形"},{id:4,label: "直角三角形"},{id:5,label: "三角形"},
-	{id:6,label: "正方形"},{id:7,label: "ひし形"},{id:8,label: "長方形"},{id:9,label: "平行四辺形"},{id:10,label: "台形"}
-];
-
-let conditionToolBox = [
-	{id:0,label:"1組の平行な辺があるか"},{id:1,label: "頂点は三つか"},{id:2 ,label:"3辺の長さは等しいか"},{id:3,label:"2辺の長さが等しいか"},{id:4,label:"4辺の長さが等しいか"},
-	{id:5,label:"直角があるか"},{id:6,label:"2組の平行な辺があるか"}
-];
-
-let targetAndCondition = [
-	[false,false,false,false,false,false,false],//0
-	[false,true,true,true,false,false,false],//1
-	[false,true,false,true,false,true,false],//2
-	[false,true,false,true,false,false,false],//3
-	[false,true,false,false,false,true,false],//4
-	[false,true,false,false,false,false,false],//5
-	[true,false,true,true,true,true,true],//6
-	[true,false,true,true,true,false,true],//7ひしがた
-	[true,false,false,true,false,true,true],//8
-	[true,false,false,true,false,false,true],//9平行四辺形
-	[true,false,false,false,false,false,false]//10台形
-];
-
-var projectId;
-
-var selectedSidePanelTab = 0;
-
 firebase.auth().onAuthStateChanged(function(user) {
     if (user) {
       // ...
@@ -184,18 +154,19 @@ function load() {
 		if(snapshot.val().code && snapshot.val().code != "{}") {
 			let data = JSON.parse(snapshot.val().code);
 			let entryPointId = nodes.get()[0].id;
-			addToNodes(data,entryPointId);
+			addToNodes(data,entryPointId,EdgeType.Entry);
 		}
+		$("#loading").hide();
 	});
-	
-	
 }
 
-function addToNodes(node,parent) {
+function addToNodes(node,parent,edgeType) {
 	let newId = addObject(node.link,node.isCondition);
-	nodes._data[parent].edgeIds.push(addToEdges(parent,newId,EdgeType.Entry));
-	if(node.yes) addToNodes(node.yes,newId);
-	if(node.no) addToNodes(node.no,newId);
+	let edgeToParentId = addToEdges(parent,newId,edgeType);
+	nodes._data[parent].edgeIds.push(edgeToParentId);
+	if(node.yes) nodes._data[newId][EdgeType.Yes] = addToNodes(node.yes,newId,EdgeType.Yes);
+	if(node.no) nodes._data[newId][EdgeType.No] = addToNodes(node.no,newId,EdgeType.No);
+	return edgeToParentId;
 }
 
 function addToEdges(from, to, type) {
@@ -207,20 +178,27 @@ function addToEdges(from, to, type) {
 		id: edgeId,
 		label: type,
 	});
+	nodes._data[to].edgeIds.push(edgeId);
 	return edgeId;
 }
 
 function save() {
+	unValidated();
 	let entryPointId = nodes.get().find(node=> node.type == ObjectKind.EntryPoint).id;
 	let json = translateToServerData(entryPointId);
 	firebase.database().ref("projects/"+projectId).update({
 		code:JSON.stringify(json)
 	});
-	console.log(json);
+	console.log("saved");
+	return json;
 }
 
 function translateToServerData(id) {
 	let node = nodes._data[id];
+
+	if(!node) {
+		return null;
+	}
 
 	if(node.type == ObjectKind.EntryPoint) {
 		if(node.edgeIds && node.edgeIds.length != 0) {
@@ -257,155 +235,6 @@ function getParam(name, url) {
     return decodeURIComponent(targets[2].replace(/\+/g, " "));
 }
 
-function tappedJudgeButton()
-{
-	if(hantei == null)
-	{
-
-		let outputData = $.extend([], data);
-		let entryPointData =  outputData.filter(e => e.type == "entryPoint")[0];
-
-		let simpleStruct = getSimpleStructData(entryPointData)
-		let usedtargetIds = JSON.stringify(usingAlltargets(simpleStruct).sort());
-		let targetIds = JSON.stringify(targetToolBox.map(function(e){return e.id}).sort());
-
-		hantei = (isAllCorrect(simpleStruct,[],[]) && isUsingAllBranch(simpleStruct) && usedtargetIds == targetIds);
-		firebase.database().ref("projects/"+projectId).update({
-			code:JSON.stringify(simpleStruct)
-		});
-		var yattokoDataRef = firebase.database().ref("projects/"+projectId+"/yattoko").push()
-		yattokoDataRef.set({
-			user:firebase.auth().currentUser.uid,
-			json:JSON.stringify(simpleStruct),
-			hantei:hantei
-		});
-		document.getElementById("defaultCanvas0").toBlob(function(blob){
-			firebase.storage().ref().child("yattoko/" + projectId + "/"+ yattokoDataRef.key + ".png").put(blob);
-		});
-
-	}
-}
-
-function isAllCorrect(obj,falseQuestions,trueQuestions)
-{
-	if(obj.yes)
-	{
-		if(!isAllCorrect(obj.yes, falseQuestions, trueQuestions.concat(obj.id)))
-		{
-			return false;
-		}
-	}
-	if(obj.no)
-	{
-		if(!isAllCorrect(obj.no, falseQuestions.concat(obj.id), trueQuestions))
-		{
-			return false;
-		}
-	}
-	if(obj.child || obj.type == "entryPoint")
-	{
-		if(!isAllCorrect(obj.child,falseQuestions,trueQuestions))
-		{
-			return false;
-		}
-	}
-	if(obj.type == "target")
-	{
-		for(var falseQ = 0; falseQ < falseQuestions.length; falseQ++)
-		{
-			if(targetAndCondition[obj.id][falseQuestions[falseQ]])
-			{
-				return false;
-			}
-		}
-		for(var trueQ = 0; trueQ < trueQuestions.length; trueQ++)
-		{
-			if(!targetAndCondition[obj.id][trueQuestions[trueQ]])
-			{
-				return false;
-			}
-		}
-	}
-	return true;
-}
-
-function isUsingAllBranch(obj)
-{
-	if(obj.yes && obj.no)
-	{
-		return (isUsingAllBranch(obj.yes) && isUsingAllBranch(obj.no));
-	}
-	else if(obj.child)
-	{
-		return isUsingAllBranch(obj.child);
-	}
-	else if(!obj.yes && !obj.no) //targetの場合
-	{
-		return true;
-	}
-	else //yesとnoどちらかしか無い場合
-	{
-		return false;
-	}
-}
-
-function usingAlltargets(obj)
-{
-	var targets = []
-	if(obj.yes || obj.no)
-	{
-		if(obj.yes)
-		{
-			targets = targets.concat(usingAlltargets(obj.yes));
-		}
-		if(obj.no)
-		{
-			targets = targets.concat(usingAlltargets(obj.no))
-		}
-	}
-	else if(obj.child)
-	{
-		targets = targets.concat(usingAlltargets(obj.child));
-	}
-	else if(obj.type == "target")
-	{
-		return [obj.id]
-	}
-	return targets
-
-}
-
-function getSimpleStructData(obj)
-{
-	var target = {};
-	if(obj.id != null)
-	{
-		target.id = obj.id
-	}
-	if(obj.title)
-	{
-		target.title = obj.title;
-	}
-	if(obj.type)
-	{
-		target.type = obj.type;
-	}
-	if(obj.child)
-	{
-		target.child = getSimpleStructData(obj.child);
-	}
-	if(obj.yes && obj.yes.child)
-	{
-		target.yes = getSimpleStructData(obj.yes.child);
-	}
-	if(obj.no && obj.no.child)
-	{
-		target.no = getSimpleStructData(obj.no.child);
-	}
-	
-	return target;
-}
-
 function showLeftSideMenu(selected) {
 	$("#leftSidePanelList").empty();
 	selectedSidePanelTab = selected;
@@ -414,16 +243,16 @@ function showLeftSideMenu(selected) {
 	{
 		$("#selectorContainer .selectorButton:first").addClass("selectorButton-selected");
 		$("#selectorContainer .selectorButton:nth-child(2)").removeClass("selectorButton-selected");
-		data = conditionToolBox;
+		data = conditions;
 	}
 	else {
 		$("#selectorContainer .selectorButton:nth-child(2)").addClass("selectorButton-selected");
 		$("#selectorContainer .selectorButton:first").removeClass("selectorButton-selected");
-		data = targetToolBox;
+		data = targets;
 	}
 
 	for (var item in data) {
-		$("#leftSidePanelList").append('<li class="leftSidePanelListItem"  onclick="tapToolbox('+data[item].id+');">'+ data[item].label +'</li>')
+		$("#leftSidePanelList").append('<li class="leftSidePanelListItem"  onclick="tapToolbox('+data[item].id+');">'+ (selectedSidePanelTab == 0 ? data[item].text : "<img class='targetItemImage' src='asset/"+ data[item].id +".png'>") +'</li>')
 	}
 }
 
@@ -432,16 +261,94 @@ function tapToolbox(item) {
 	save();
 }
 
+function validate() {
+	let savedData = save();
+	function isUsingAllTargets(data) {
+		function getChildTargetIds(data) {
+			var result = [];
+			if(data.isCondition) {
+				if(data.yes) {
+					result = result.concat(getChildTargetIds(data.yes));
+				}
+				if(data.no) {
+					result = result.concat(getChildTargetIds(data.no));
+				}
+			}else {
+				result = [data.link];
+			}
+			return result;
+		}
+		let usingTargets = getChildTargetIds(data).sort();
+		var templateTargets = targets.map(n => n.id).sort();
+		return JSON.stringify(usingTargets) == JSON.stringify(templateTargets);
+	}
+	function hasYesNo(data) {
+		if(data.isCondition) {
+			if(data.yes && data.no) {
+				return hasYesNo(data.yes) && hasYesNo(data.no);
+			} else {
+				return false
+			}
+		}else {
+			return true
+		}
+	}
+
+	function noContradiction(data,parentConditionsListYes,parentConditionsListNo) {
+		if(data.isCondition) {
+			var result = true;
+			if(data.yes && !noContradiction(data.yes,parentConditionsListYes.concat([data.link]),parentConditionsListNo)) result = false;
+			if(data.no && !noContradiction(data.no, parentConditionsListYes, parentConditionsListNo.concat([data.link]))) result = false;
+			return result;
+		}else {
+			var result = true
+			for(var i in parentConditionsListYes) {
+				if(!targets[data.link].condition[parentConditionsListYes[i]]) result = false;
+			}
+			for(var i in parentConditionsListNo) {
+				if(targets[data.link].condition[parentConditionsListNo[i]]) result = false;
+			}
+			return result;
+		}
+	}
+	
+	var result = true;
+
+	if(!isUsingAllTargets(savedData)) result = false;
+	if(!hasYesNo(savedData)) result = false;
+	if(!noContradiction(savedData,[],[])) result = false;
+
+
+	$("#startButton").animate({"top":-$("#startButton").height(),"opacity":0},{duration: "normal",easing: "swing"});
+	$("#validateButtonRope").animate({"top":-$("#startButton").height(),"opacity":0}, "normal","swing" ,function() {
+		if(result) {
+			$("#validateResult").attr("src","asset/succeeded.png");
+		}
+		else {
+			$("#validateResult").attr("src","asset/failed.png");
+		}
+		$("#validateResult").css({"top":-$("#validateResult").height()});
+		$("#validateResult").fadeIn("normal").animate({"top":70},{duration: "normal",easing: "swing"});
+		$("#validateButtonRope").animate({"top":0,"opacity":100},{duration: "normal",easing: "swing"});
+	});
+	
+}
+
+function unValidated() {
+	$("#startButton").css({"top":70,opacity:1});
+	$("#validateResult").hide();
+}
+
 function addObject(item,isCondition){
 	let id = (Math.random() * 1e7).toString(32)
 	if(isCondition)
 	{
 		nodes.add({
 		id: id,
-		label:conditionToolBox[item].label,
+		label:conditions[item].text,
 		color: "#ED9A5D",
 		type: ObjectKind.Condition,
-		link: conditionToolBox[item].id,
+		link: conditions[item].id,
 		isCondition: true,
 		edgeIds: []
 		});
@@ -449,10 +356,11 @@ function addObject(item,isCondition){
 	}else {
 		nodes.add({
 		id: id,
-		label:targetToolBox[item].label, shape: 'box',
+		shape: 'image',
+		image: "asset/" + targets[item].id + ".png",
 		color:"#4A90E2",
 		type: ObjectKind.Target,
-		link: conditionToolBox[item].id,
+		link: targets[item].id,
 		isCondition: false,
 		edgeIds: []
 		});
@@ -475,22 +383,31 @@ function addEdgeMode(from,edgeType) {
 
 function deleteNode(node) {
 	let toNode = nodes.get().find(function(elem){return elem.id == node});
-	nodes.remove({id:node});
 	for(var i in toNode.edgeIds) {
-		edges.remove({id: toNode.edgeIds[i]});
+		deleteEdgeByEdgeId(toNode.edgeIds[i]);
 	}
+	nodes.remove({id:node});
 	save();
 	closePopup();
 }
 
+function deleteEdgeByEdgeId(edgeId) {
+	let edge = edges._data[edgeId];
+	let fromNode = nodes._data[edge.from];
+	let toNode = nodes._data[edge.to];
+	
+	if(fromNode) {
+		fromNode.edgeIds = fromNode.edgeIds.filter(id => id != edgeId);
+		fromNode[edge.type] = null;
+	}
+	if(toNode) {
+		toNode.edgeIds = toNode.edgeIds.filter(id => id != edgeId);
+	}
+	edges.remove({id:edgeId});
+}
+
 function deleteEdge(nodeId,type) {
-	let node = nodes.get().find(i => i.id == nodeId);
-	let id = node[type];
-	nodes._data[nodeId][type] = null;
-	node.edgeIds = node.edgeIds.filter(i => i != id);
-	let toId = edges._data[id].to;
-	nodes._data[toId].edgeIds = 	nodes._data[toId].edgeIds.filter(i => i != id);
-	edges.remove({id: id});
+	deleteEdgeByEdgeId(nodes._data[nodeId][type]);
 	save();
 	closePopup();
 }

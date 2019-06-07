@@ -86,8 +86,8 @@
 
 			<div id="validateButtonContainer">
 					<div id="validateButtonRope"></div>
-					<img id="startButton" src="asset/start.png">
-					<img id="validateResult" class="hidden" src="asset/succeeded.png">
+					<img id="startButton" src="asset/start.png" onclick="validate();">
+					<img id="validateResult" class="hidden" src="asset/succeeded.png" onclick="unValidated();">
 			</div>
 
 			<div id="popupBackGround" onclick="closePopup();">
@@ -98,6 +98,12 @@
 				<span id="popupText">3辺の長さが等しいかどうか</span>
 				<ul id="popupButtons">
 				</ul>
+			</div>
+
+			<div id="loading" onclick="closePopup();">
+				<div id="loadingSpinner" class="spinner-border" role="status">
+					<span class="sr-only">Loading...</span>
+				  </div>
 			</div>
 			
 		</div>
