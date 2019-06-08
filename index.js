@@ -8,6 +8,8 @@ let ObjectKind = {
 	EntryPoint: "ENTRY POINT"
 }
 
+let startTime = new Date();
+
 let EdgeType = {
 	Yes: "YES",
 	No: "NO",
@@ -182,15 +184,29 @@ function addToEdges(from, to, type) {
 	return edgeId;
 }
 
-function save() {
-	unValidated();
+function getSavedData() {
 	let entryPointId = nodes.get().find(node=> node.type == ObjectKind.EntryPoint).id;
 	let json = translateToServerData(entryPointId);
+	return json;
+}
+
+function save(isValidate) {
+	unValidated();
+	let json = getSavedData();
+	let stop = new Date();
 	firebase.database().ref("projects/"+projectId).update({
-		code:JSON.stringify(json)
+		code:JSON.stringify(json),
+		datetime: firebase.database.ServerValue.TIMESTAMP
+	});
+	firebase.database().ref("projects/"+projectId + "/yattoko/log").push({
+		code:JSON.stringify(json),
+		datetime: firebase.database.ServerValue.TIMESTAMP,
+		time:  (stop.getTime() - startTime.getTime()) / 1000,
+		isValidate: isValidate,
+		hantei: hantei(getSavedData())
+
 	});
 	console.log("saved");
-	return json;
 }
 
 function translateToServerData(id) {
@@ -258,11 +274,10 @@ function showLeftSideMenu(selected) {
 
 function tapToolbox(item) {
 	addObject(item,selectedSidePanelTab == 0);
-	save();
+	save(false);
 }
 
-function validate() {
-	let savedData = save();
+function hantei(savedData) {
 	function isUsingAllTargets(data) {
 		function getChildTargetIds(data) {
 			var result = [];
@@ -318,6 +333,13 @@ function validate() {
 	if(!hasYesNo(savedData)) result = false;
 	if(!noContradiction(savedData,[],[])) result = false;
 
+	return result;
+}
+
+function validate() {
+	
+	let result = hantei(getSavedData());
+	save(true);
 
 	$("#startButton").animate({"top":-$("#startButton").height(),"opacity":0},{duration: "normal",easing: "swing"});
 	$("#validateButtonRope").animate({"top":-$("#startButton").height(),"opacity":0}, "normal","swing" ,function() {
@@ -387,7 +409,7 @@ function deleteNode(node) {
 		deleteEdgeByEdgeId(toNode.edgeIds[i]);
 	}
 	nodes.remove({id:node});
-	save();
+	save(false);
 	closePopup();
 }
 
@@ -408,7 +430,7 @@ function deleteEdgeByEdgeId(edgeId) {
 
 function deleteEdge(nodeId,type) {
 	deleteEdgeByEdgeId(nodes._data[nodeId][type]);
-	save();
+	save(false);
 	closePopup();
 }
 
@@ -433,7 +455,7 @@ function addEdge(to) {
 		fromNode.edgeIds.push(edgeId);
 	}
 	addEdgeTmp = null;
-	save();
+	save(false);
 	closePopup();
 }
 
@@ -500,9 +522,21 @@ $(function() {
 				$("#popupButtons").append("<li onclick='deleteNode(\""+node.id+"\");'>削除</li>");		
 			}
 			$("#popupTitle").text(node.type);
-			$("#popupText").text(node.label);
+			$("#popupText").text( node.type == ObjectKind.Target ? "オブジェクト": node.label);
 			$("#popup").css("top",param.pointer.DOM.y - 270).css("left",param.pointer.DOM.x - 276 / 2).css("display","block");
 			$("#popupBackGround").css("display","block");
 		}
 	});
+
+	$(window).on("beforeunload",function(e){
+		let stop = new Date();
+		let json = getSavedData();
+		firebase.database().ref("projects/"+projectId + "/yattoko/sessions/").push({
+			code:JSON.stringify(json),
+			datetime: firebase.database.ServerValue.TIMESTAMP,
+			hantei: hantei(getSavedData()),
+			time: (stop.getTime() - startTime.getTime()) / 1000
+		});
+	});
+
 });
