@@ -362,6 +362,7 @@ function unValidated() {
 }
 
 function addObject(item,isCondition){
+	network.addNodeMode();
 	let id = (Math.random() * 1e7).toString(32)
 	if(isCondition)
 	{
@@ -374,7 +375,6 @@ function addObject(item,isCondition){
 		isCondition: true,
 		edgeIds: []
 		});
-		return id;
 	}else {
 		nodes.add({
 		id: id,
@@ -386,8 +386,9 @@ function addObject(item,isCondition){
 		isCondition: false,
 		edgeIds: []
 		});
-		return id;
 	}
+	network.disableEditMode();
+	return id;
 }
 
 function closePopup() {
